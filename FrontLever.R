@@ -4,6 +4,8 @@ pacman::p_load(pacman, dplyr, GGally, ggplot2, ggthemes,
 
 library(dplyr)
 library(plyr)
+library(gganimate)
+library(gifski)
 setwd("~/stats/FrontLever/")
 
 data = read.csv("~/stats/FrontLever/Data/cleanedDataNoComment.csv")
@@ -21,6 +23,10 @@ data$pullup <- as.character(data$pullup)
 data$pullup <- factor(data$pullup, levels=c("<10% (so usually couple of pullups with BW)", "10%-30%", "30%-50%", "50%-65%", "65%-80%", "80%-90%",">90%"))
 revalue(data$pullup, c("<10% (so usually couple of pullups with BW)" = "<10%")) -> data$pullup
 
+as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
+jitteredData <- data
+#jitteredData$pullup <- jitter(as.numeric.factor(data$pullup))
+#jitteredData$FLprogression <- jitter(data$FLprogression)
 png(filename="./plots/data.png")
 plot(data)
 dev.off()
@@ -116,3 +122,23 @@ ggplot(data,aes(x=Npullups, y=FLprogression)) +
   geom_jitter(width=0.5, height=0.5) +
   labs(y='', x='Number of Pullups',caption='All points are jittered by 0.5 vertically and horizontally', title="Front Lever progression vs number of pullups split by max pullup strength")
 dev.off()    
+
+
+
+file_renderer(dir = "./tmp", prefix = "gganim_plot", overwrite = TRUE)
+
+p <- ggplot(data, aes(x=Npullups, y=FLprogression)) +
+  geom_jitter(width=0.5,height=0.5) +
+  stat_summary(fun="mean", size=2, color="cadetblue2", alpha=0.7) + 
+  labs(y='', x="Number of Pullups", title='Max pullup: {closest_state} of BW')+
+  theme_minimal()+
+  theme(
+    text=element_text(family='Avenir Next Condensed',size=16),
+    axis.text.x = element_text(size=14),
+    axis.text.y = element_text(size=14)
+    ) +
+  transition_states(states=pullup, state_length = 7,transition_length = 3) + 
+  enter_grow()+
+  exit_fade()
+
+animate(p, renderer = gifski_renderer(file="./plots/FLprogressionByPullupAnimation.gif"))
